@@ -5,7 +5,6 @@ import os,sys
 from os import path as osp
 from glob import glob
 sys.path.append(os.path.abspath('./mrcnn'))
-import model as modellib
 from config import Config
 import skimage.io
 import utils
@@ -37,8 +36,6 @@ def main(argv=None):
         print(image.shape)
         images = [image]
         print("Processing {} images".format(len(images)))
-        for im in images:
-             modellib.log("image", im)
         print('RGB image loaded and preprocessed.')
         molded_images, image_metas, windows = mold_inputs(images)
         print(molded_images.shape)
@@ -70,17 +67,10 @@ def main(argv=None):
         
         np.set_printoptions(suppress=False,precision=4)
         print('Windows', windows.shape,' ',windows)
-        detections = sess.run(detectionsT, feed_dict={img_ph: molded_images, img_meta_ph: image_metas, img_anchors_ph:image_anchors})
-        #print('Detections: ',detections[0].shape, detections[0])
-        mrcnn_class = sess.run(mrcnn_classT, feed_dict={img_ph: molded_images, img_meta_ph: image_metas, img_anchors_ph:image_anchors})
-        #print('Classes: ',mrcnn_class[0].shape, mrcnn_class[0])
-        mrcnn_bbox = sess.run(mrcnn_bboxT, feed_dict={img_ph: molded_images, img_meta_ph: image_metas, img_anchors_ph:image_anchors})
-        #print('BBoxes: ',mrcnn_bbox[0].shape, mrcnn_bbox[0])
-        mrcnn_mask = sess.run(mrcnn_maskT, feed_dict={img_ph: molded_images, img_meta_ph: image_metas, img_anchors_ph:image_anchors})
-        #print('Masks: ',mrcnn_mask[0].shape )#, outputs1[0])
-        rois = sess.run(roisT, feed_dict={img_ph: molded_images, img_meta_ph: image_metas, img_anchors_ph:image_anchors})
-        #print('Rois: ',rois[0].shape, rois[0])
 
+        detections, mrcnn_class, mrcnn_bbox, mrcnn_mask, rois = \
+            sess.run([detectionsT, mrcnn_classT, mrcnn_bboxT, mrcnn_maskT, roisT],
+                feed_dict={img_ph: molded_images, img_meta_ph: image_metas, img_anchors_ph:image_anchors})
         
         results = []
         for i, image in enumerate(images):
@@ -112,20 +102,9 @@ def main(argv=None):
                'keyboard', 'cell phone', 'microwave', 'oven', 'toaster',
                'sink', 'refrigerator', 'book', 'clock', 'vase', 'scissors',
                'teddy bear', 'hair drier', 'toothbrush']
-        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])#, ax=get_ax())
+        visualize.display_instances(image, r['rois'], r['masks'], r['class_ids'], class_names, r['scores'])
     print('Done')
     return 0
-
-def get_ax(rows=1, cols=1, size=8):
-    """Return a Matplotlib Axes array to be used in
-    all visualizations in the notebook. Provide a
-    central point to control graph sizes.
-    
-    Change the default size attribute to control the size
-    of rendered images
-    """
-    _, ax = plt.subplots(rows, cols, figsize=(size*cols, size*rows))
-    return ax
 
 def compute_backbone_shapes(config, image_shape):
     """Computes the width and height of each stage of the backbone network.
@@ -160,16 +139,6 @@ def get_anchors(image_shape, config):
         # Normalize coordinates
         _anchor_cache[tuple(image_shape)] = utils.norm_boxes(a, image_shape[:2])
     return _anchor_cache[tuple(image_shape)]
-
-def is_grey_scale(img_path):
-    im = Image.open(img_path).convert('RGB')
-    w,h = im.size
-    for i in range(w):
-        for j in range(h):
-            r,g,b = im.getpixel((i,j))
-            if r != g != b: return False
-    return True
-
 
 def mold_inputs(images):
         """Takes a list of images and modifies them to the format expected

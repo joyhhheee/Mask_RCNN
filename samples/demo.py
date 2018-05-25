@@ -76,7 +76,7 @@ model.load_weights(COCO_MODEL_PATH, by_name=True)
 #model.keras_model.save('maskrcnn.h5')
 sys.path.append(os.path.join(ROOT_DIR, "mrcnn"))
 from scripts.export_model import export
-#export(config, MODEL_DIR, COCO_MODEL_PATH)
+export(config, MODEL_DIR, COCO_MODEL_PATH)
 
 # ## Class Names
 # 
